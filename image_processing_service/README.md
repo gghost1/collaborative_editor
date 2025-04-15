@@ -1,0 +1,1 @@
+# Python service to merge images and save them to database
