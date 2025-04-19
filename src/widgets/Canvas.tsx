@@ -1,12 +1,16 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { addPixels } from '../store/pixelsSlice';
+import type { RootState } from '../store/store';
 import type { Pixel } from '../entities/Pixel';
 
 const CollaborativeCanvas: React.FC = () => {
-
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isDrawing = useRef<boolean>(false);
+  const isDrawing = useRef(false);
   const lastPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [pixelLogs, setPixelLogs] = useState<Pixel[][]>([]);
+
+  const dispatch = useDispatch();
+  const logs = useSelector((s: RootState) => s.pixels);
 
   const strokeStyle = '#000000';
   const lineWidth = 3;
@@ -34,31 +38,38 @@ const CollaborativeCanvas: React.FC = () => {
     const sx = x0 < x1 ? 1 : -1;
     const sy = y0 < y1 ? 1 : -1;
     let err = dx - dy;
+    let cx = x0;
+    let cy = y0;
 
-    let currentX = x0;
-    let currentY = y0;
     while (true) {
-      pixels.push({ x: currentX, y: currentY, color: strokeStyle });
-      if (currentX === x1 && currentY === y1) break;
+      pixels.push({ x: cx, y: cy, color: strokeStyle });
+      if (cx === x1 && cy === y1) break;
       const e2 = 2 * err;
-      if (e2 > -dy) {
-        err -= dy;
-        currentX += sx;
-      }
-      if (e2 < dx) {
-        err += dx;
-        currentY += sy;
-      }
+      if (e2 > -dy) { err -= dy; cx += sx; }
+      if (e2 < dx) { err += dx; cy += sy; }
     }
     return pixels;
   };
 
+  // Перерисовываем весь canvas при любом обновлении логов (для Undo/Replay)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const chunk of logs) {
+      for (const p of chunk) {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 1, 1);
+      }
+    }
+  }, [logs]);
 
+  // Основная логика рисования
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.lineWidth = lineWidth;
@@ -66,27 +77,27 @@ const CollaborativeCanvas: React.FC = () => {
 
     const handleMouseDown = (e: MouseEvent) => {
       isDrawing.current = true;
-      const pos = getMousePos(canvas, e);
-      lastPosRef.current = pos;
+      lastPosRef.current = getMousePos(canvas, e);
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDrawing.current) return;
       const pos = getMousePos(canvas, e);
 
+      // Рисуем линию на локальном canvas
       ctx.beginPath();
       ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
       ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
 
+      // Вычисляем пиксели и диспатчим в Redux
       const changedPixels = getLinePixels(
         lastPosRef.current.x,
         lastPosRef.current.y,
         pos.x,
         pos.y
       );
-      console.log('Changed pixels:', changedPixels);
-      setPixelLogs((prevLogs) => [...prevLogs, changedPixels]);
+      dispatch(addPixels(changedPixels));
 
       lastPosRef.current = pos;
     };
@@ -97,16 +108,16 @@ const CollaborativeCanvas: React.FC = () => {
 
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseup', handleMouseUpOrLeave);
     canvas.addEventListener('mouseleave', handleMouseUpOrLeave);
-    window.addEventListener('mouseup', handleMouseUpOrLeave);
 
     return () => {
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mouseup', handleMouseUpOrLeave);
       canvas.removeEventListener('mouseleave', handleMouseUpOrLeave);
-      window.removeEventListener('mouseup', handleMouseUpOrLeave);
     };
-  }, []);
+  }, [dispatch]);
 
   return (
     <div>
@@ -126,7 +137,7 @@ const CollaborativeCanvas: React.FC = () => {
             padding: '10px',
           }}
         >
-          {JSON.stringify(pixelLogs, null, 2)}
+          {JSON.stringify(logs, null, 2)}
         </pre>
       </div>
     </div>
