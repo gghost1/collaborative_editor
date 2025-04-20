@@ -1,5 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
-import { pixelsSlice } from "../features/pixelsSlice"
+import { pixelsSlice } from "./pixelsSlice"
 
 export const store = configureStore({
   reducer: { pixels: pixelsSlice.reducer },
