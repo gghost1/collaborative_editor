@@ -1,1 +1,0 @@
-# Client application to draw on a canvas collaboratively
