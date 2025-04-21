@@ -10,16 +10,24 @@ export const SocketHandler: React.FC<{ roomId: string }> = ({ roomId }) => {
   const dispatch = useDispatch();
   const stompRef = useRef<any>(null);
   const localLogs = useSelector((s: RootState) => s.pixels);
-  
+
   useEffect(() => {
-    const socket = new SockJS('/ws');
+    // Если фронт и бэк на разных портах, указываем полный URL
+    const socket = new SockJS('http://localhost:8080/ws');
     const client = Stomp.over(socket);
+
     client.connect({}, () => {
-      client.subscribe(`/canvas/${roomId}`, msg => {
-        const remotePixels: Pixel[] = JSON.parse(msg.body);
-        dispatch(addPixels(remotePixels));
-      });
+      // Подписываемся на исходящие обновления
+      // broker prefix = "/canvas"
+      client.subscribe(
+        `/canvas/${roomId}`,
+        (msg) => {
+          const remotePixels: Pixel[] = JSON.parse(msg.body);
+          dispatch(addPixels(remotePixels));
+        }
+      );
     });
+
     stompRef.current = client;
     return () => { client.disconnect(); };
   }, [dispatch, roomId]);
@@ -27,7 +35,12 @@ export const SocketHandler: React.FC<{ roomId: string }> = ({ roomId }) => {
   useEffect(() => {
     if (!stompRef.current || localLogs.length === 0) return;
     const last = localLogs[localLogs.length - 1];
-    stompRef.current.send(`/api/canvas/${roomId}`, {}, JSON.stringify(last));
+    // Отправляем на контроллер handleDraw — mapping prefix = "/api", path = "/draw/{canvasId}"
+    stompRef.current.send(
+      `/api/draw/${roomId}`,  // <-- сюда приходит @MessageMapping("/draw/{canvasId}")
+      {},
+      JSON.stringify(last)
+    );
   }, [localLogs, roomId]);
 
   return null;
