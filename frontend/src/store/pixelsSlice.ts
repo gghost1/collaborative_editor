@@ -17,6 +17,7 @@ export const pixelsSlice = createSlice({
             state.length = 0;
         },
         setAll(state, action: PayloadAction<PixelsState>) {
+            console.log("setAll", action.payload, state);
             return action.payload;
         },
     },
