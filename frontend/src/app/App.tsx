@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from '../store/store';
 import { SocketHandler } from '../features/SocketHandler';
@@ -54,12 +54,10 @@ const RoomPage: React.FC = () => {
 
 const App: React.FC = () => (
   <Provider store={store}>
-    <Router>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/:roomId" element={<RoomPage />} />
       </Routes>
-    </Router>
   </Provider>
 );
 
