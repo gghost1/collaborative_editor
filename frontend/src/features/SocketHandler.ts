@@ -35,6 +35,7 @@ export const SocketHandler: React.FC<{ roomId: string }> = ({ roomId }) => {
   useEffect(() => {
     if (!stompRef.current || localLogs.length === 0) return;
     const last = localLogs[localLogs.length - 1];
+    console.log('send', last); // update 
     // Отправляем на контроллер handleDraw — mapping prefix = "/api", path = "/draw/{canvasId}"
     stompRef.current.send(
       `/api/draw/${roomId}`,  // <-- сюда приходит @MessageMapping("/draw/{canvasId}")
