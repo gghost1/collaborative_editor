@@ -2,6 +2,7 @@ package ru.collaborative_editor.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 public class CanvasController {
 
     private final StoreUpdates storeUpdates;
@@ -24,6 +26,7 @@ public class CanvasController {
     //api/draw/{canvasId}
     @MessageMapping("/draw/{canvasId}")
     public void handleDraw(@Payload UpdatedCells updatedCells, @DestinationVariable String canvasId) throws JsonProcessingException {
+        log.info("handleDraw: {}", updatedCells);
         List<Cell> cells = storeUpdates.createOrGetCanvasById(canvasId);
         
         // Add new cells to the buffer

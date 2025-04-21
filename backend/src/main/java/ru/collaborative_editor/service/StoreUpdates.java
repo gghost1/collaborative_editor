@@ -16,10 +16,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-import lombok.RequiredArgsConstructor;
-
+import lombok.RequiredArgsConstructor;  
+import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StoreUpdates {
 
     // key - canvasId, value - list of updates
@@ -30,6 +31,7 @@ public class StoreUpdates {
 
     @Scheduled(fixedRateString = "${update.interval}", timeUnit = TimeUnit.SECONDS)
     public void sendBufferedUpdates() {
+        log.info("Sending buffered updates");
         canvasUpdates.forEach((canvasId, cells) -> {
             if (!cells.isEmpty()) {
                 try {
