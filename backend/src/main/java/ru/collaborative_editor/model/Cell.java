@@ -7,6 +7,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public record Cell(
         int x,
         int y,
-        String color
+        String color // for example hex color
 ) {
 }
