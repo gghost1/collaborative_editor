@@ -16,7 +16,7 @@ public class KafkaUpdateMessageListener {
 
     private final SimpMessagingTemplate messagingTemplate;
 
-    @KafkaListener(topics = "${spring.kafka.topic}", groupId = "${spring.kafka.group-id}")
+    @KafkaListener(topics = "${spring.kafka.topic-socket}", groupId = "${spring.kafka.group-id}")
     public void listen(@Payload String message) throws JsonProcessingException {
         UpdateMessage updateMessage = UpdateMessage.fromJson(message);
         String destination = "/canvas/" + updateMessage.canvasId();

@@ -18,17 +18,29 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;  
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class StoreUpdates {
+public class SendUpdates {
+
+    @Value("${spring.kafka.topic-socket}")
+    private String topicSocket;
+
+    @Value("${spring.kafka.topic-db}")
+    private String topicDb;
 
     // key - canvasId, value - list of updates
     private final Map<String, List<Cell>> canvasUpdates = new ConcurrentHashMap<>();
     private final KafkaTemplate<String, String> socketKafkaTemplate;
 
+    // Send immediate updates for real-time rendering
+    public void sendRealtimeUpdate(String canvasId, UpdatedCells cells) throws JsonProcessingException {
+        UpdateMessage updateMessage = new UpdateMessage(canvasId, cells);
+        socketKafkaTemplate.send(topicSocket, updateMessage.toJson());
+    }
 
-
+    //TODO: implement batch processing for sending updates to db
     @Scheduled(fixedRateString = "${update.interval}", timeUnit = TimeUnit.SECONDS)
     public void sendBufferedUpdates() {
         log.info("Sending buffered updates");
@@ -39,7 +51,7 @@ public class StoreUpdates {
                         canvasId, 
                         new UpdatedCells(new ArrayList<>(cells))
                     );
-                    socketKafkaTemplate.send("ws-draw", updateMessage.toJson());
+                    socketKafkaTemplate.send(topicDb, updateMessage.toJson());
                     cells.clear(); // Clear after sending
                 } catch (JsonProcessingException e) {
                     // Handle error
