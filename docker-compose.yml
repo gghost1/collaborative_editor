@@ -23,7 +23,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://host.docker.internal:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -83,6 +83,10 @@ services:
     ports:
       - "8080:8080"
     restart: always
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - SPRING_KAFKA_GROUP_ID=backend-group
+      - SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL=PLAINTEXT
     depends_on:
       - redis
       - kafka
@@ -90,17 +94,29 @@ services:
     networks:
       - app-network
 
- frontend:
-   build: ./frontend
-   ports:
-     - "3000:3000"
-   restart: always
-   depends_on:
-     - backend
-   networks:
-     - app-network
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    restart: always
+    depends_on:
+      - backend
+    networks:
+      - app-network
 
-
+  image_processing:
+    build: ./image_processing_service
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=postgresql
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=4000
+    depends_on:
+      - kafka
+      - db
+    networks:
+      - app-network
 networks:
   app-network:
     driver: bridge
