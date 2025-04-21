@@ -145,15 +145,16 @@ class KafkaToPostgresPipeline:
 if __name__ == "__main__":
     kafka_config = {
         'bootstrap.servers': 'localhost:9092',
-        'group.id': 'frame-consumer-group',
+        'group.id': 'pixel-updater',
         'auto.offset.reset': 'earliest'
     }
     
     postgres_config = {
         'host': 'localhost',
-        'database': 'dnp',
-        'user': 'admin',
-        'password': '12345678'
+        'port': '5432',
+        'database': 'pixels_db',
+        'user': 'postgres',
+        'password': 'secret'
     }
     
     pipeline = KafkaToPostgresPipeline(kafka_config, postgres_config)
