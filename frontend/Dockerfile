@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 RUN npm install --legacy-peer-deps
+RUN npm install lodash @types/lodash
 
 COPY . .
 RUN npm run build

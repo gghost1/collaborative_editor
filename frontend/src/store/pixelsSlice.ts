@@ -1,27 +1,47 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { Pixel } from "../entities/Pixel";
 
-type PixelsState = Pixel[][];
+type PixelsState = {
+    history: Pixel[][]; // Полная история изменений
+    pending: Pixel[];   // Пиксели для отправки
+    rendered: Pixel[];  // Все отрендеренные пиксели
+};
+
+const initialState: PixelsState = {
+    history: [],
+    pending: [],
+    rendered: []
+};
 
 export const pixelsSlice = createSlice({
     name: "pixels",
-    initialState: [] as PixelsState,
+    initialState,
     reducers: {
         addPixels: (state, action: PayloadAction<Pixel[]>) => {
-            state.push(action.payload);
+            state.pending.push(...action.payload);
+            state.rendered.push(...action.payload);
         },
-        undo(state) {
-            state.pop();
+        flushPending: (state) => {
+            if (state.pending.length > 0) {
+                state.history.push(state.pending);
+                state.pending = [];
+            }
         },
-        clear(state) {
-            state.length = 0;
+        undo: (state) => {
+            const lastBatch = state.history.pop();
+            if (lastBatch) {
+                state.rendered = state.rendered.filter(
+                    p => !lastBatch.some(lp => lp.x === p.x && lp.y === p.y)
+                );
+            }
         },
-        setAll(state, action: PayloadAction<PixelsState>) {
-            console.log("setAll", action.payload, state);
-            return action.payload;
-        },
-    },
+        clear: (state) => {
+            state.history = [];
+            state.pending = [];
+            state.rendered = [];
+        }
+    }
 });
 
-export const { addPixels, undo, clear, setAll } = pixelsSlice.actions;
+export const { addPixels, flushPending, undo, clear } = pixelsSlice.actions;
 export default pixelsSlice.reducer;
