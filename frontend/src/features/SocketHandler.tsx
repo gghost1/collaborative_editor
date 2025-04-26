@@ -6,6 +6,7 @@ import type { RootState } from '../store/store';
 import { addPixels, flushPending } from '../store/pixelsSlice';
 import type { Pixel } from '../entities/Pixel';
 import { throttle } from 'lodash';
+import axios from 'axios';
 
 export const SocketHandler: React.FC<{ roomId: string }> = ({ roomId }) => {
   const dispatch = useDispatch();
@@ -66,6 +67,21 @@ export const SocketHandler: React.FC<{ roomId: string }> = ({ roomId }) => {
   useEffect(() => {
     if (pendingPixels.length > 0) sendThrottled(pendingPixels);
   }, [pendingPixels, sendThrottled]);
+
+  useEffect(() => {
+    const loadInitialCanvasData = async () => {
+      try {
+        const response = await axios.get(`http://localhost:8080/${roomId}`);
+        if (response.data && response.data.pixels) {
+          dispatch(addPixels(response.data.pixels));
+        }
+      } catch (error) {
+        console.error('Failed to load initial canvas data:', error);
+      }
+    };
+    
+    loadInitialCanvasData();
+  }, [roomId, dispatch]);
 
   return null;
 };
