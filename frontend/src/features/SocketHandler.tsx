@@ -71,8 +71,10 @@ export const SocketHandler: React.FC<{ roomId: string }> = ({ roomId }) => {
   useEffect(() => {
     const loadInitialCanvasData = async () => {
       try {
+        console.log(`Loading canvas data for room: ${roomId}`);
         const response = await axios.get(`http://localhost:8080/${roomId}`);
         if (response.data && response.data.pixels) {
+          console.log(`Found ${response.data.pixels.length} pixels to render`);
           dispatch(addPixels(response.data.pixels));
         }
       } catch (error) {
