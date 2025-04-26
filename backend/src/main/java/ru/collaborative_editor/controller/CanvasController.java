@@ -42,6 +42,11 @@ public class CanvasController {
 
         if (!filtered.isEmpty()) {
             sendUpdates.sendRealtimeUpdate(canvasId, new UpdatedCells(filtered), sessionId);
+
+            List<Cell> canvasBuffer = sendUpdates.createOrGetCanvasById(canvasId);
+            canvasBuffer.addAll(filtered);
+
+            log.info("Added {} pixels to canvas {} buffer for database persistence", filtered.size(), canvasId);
         }
     }
 

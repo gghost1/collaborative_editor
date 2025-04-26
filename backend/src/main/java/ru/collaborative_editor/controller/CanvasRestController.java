@@ -30,7 +30,7 @@ public class CanvasRestController {
         log.info("Getting canvas with id: {}", canvasId);
         
         try (Connection conn = dataSource.getConnection();
-            PreparedStatement stmt = conn.prepareStatement("SELECT data FROM frames WHERE id = ?")) {
+            PreparedStatement stmt = conn.prepareStatement("SELECT data FROM frames WHERE canvas_id = ?")) {
             
             log.info("Connection to database in rest controller is established");
             stmt.setString(1, canvasId);
@@ -39,9 +39,10 @@ public class CanvasRestController {
                 String pixelData = rs.getString("data");
                 String formattedResponse = String.format("{\"pixels\":%s, \"senderId\":\"%s\"}", pixelData, canvasId);
 
+                log.info("Canvas data fetched successfully");
                 return ResponseEntity.ok(formattedResponse);
             } else {
-
+                log.info("No data found for canvas with id: {}", canvasId);
                 String formattedResponse = String.format("{\"pixels\":[], \"senderId\":\"%s\"}", canvasId);
                 return ResponseEntity.ok(formattedResponse); // Return empty array if no data
             }
