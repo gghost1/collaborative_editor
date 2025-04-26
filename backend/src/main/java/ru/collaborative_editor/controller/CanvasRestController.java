@@ -1,23 +1,53 @@
 package ru.collaborative_editor.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.CrossOrigin;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import javax.sql.DataSource;
 
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.web.bind.annotation.PathVariable;
-
 @RestController
 @RequestMapping("/")
+@CrossOrigin(origins = "*")
 @Slf4j
 public class CanvasRestController {
 
+    @Autowired
+    private DataSource dataSource;
 
     @GetMapping("/{canvasId}")
-    public String getCanvas(@PathVariable String canvasId) {
-        log.info("Getting canvas with id in controller: {}", canvasId);
-        return "Hello World";
+    public ResponseEntity<String> getCanvas(@PathVariable String canvasId) {
+        log.info("Getting canvas with id: {}", canvasId);
+        
+        try (Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement("SELECT data FROM frames WHERE id = ?")) {
+            
+            log.info("Connection to database in rest controller is established");
+            stmt.setString(1, canvasId);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                String pixelData = rs.getString("data");
+                String formattedResponse = String.format("{\"pixels\":%s, \"senderId\":\"%s\"}", pixelData, canvasId);
+
+                return ResponseEntity.ok(formattedResponse);
+            } else {
+
+                String formattedResponse = String.format("{\"pixels\":[], \"senderId\":\"%s\"}", canvasId);
+                return ResponseEntity.ok(formattedResponse); // Return empty array if no data
+            }
+        } catch (SQLException e) {
+            log.error("Error fetching canvas data from database", e);
+            return ResponseEntity.internalServerError().body("Error fetching canvas data");
+        }
     }
-    
 }
