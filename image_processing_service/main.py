@@ -1,4 +1,4 @@
-from confluent_kafka import Consumer, KafkaException
+from confluent_kafka import Consumer
 import psycopg2
 import json
 import logging
@@ -38,7 +38,7 @@ class KafkaToPostgresPipeline:
         """Ensure the target table exists in PostgreSQL"""
         create_table_sql = """
         CREATE TABLE IF NOT EXISTS frames (
-            id SERIAL PRIMARY KEY,
+            canvas_id TEXT PRIMARY KEY,
             data JSONB NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -48,69 +48,88 @@ class KafkaToPostgresPipeline:
             self.conn.commit()
         logger.info("Ensured table exists")
 
-    def get_existing_pixels(self) -> List[Dict[str, Any]]:
-        """Retrieve all existing pixel data from PostgreSQL"""
+    def get_existing_pixels(self, canvas_id) -> List[Dict[str, Any]]:
+        """Retrieve existing pixel data for a specific canvas from PostgreSQL"""
         with self.conn.cursor() as cur:
-            cur.execute("SELECT data FROM frames")
-            results = cur.fetchall()
+            cur.execute("SELECT data FROM frames WHERE canvas_id = %s", (canvas_id,))
+            result = cur.fetchone()
             
-        existing_pixels = []
-        for row in results:
-            try:
-                data = row[0]
-                if isinstance(data, list):
-                    existing_pixels.extend(data)
-                else:
-                    existing_pixels.append(data)
-            except Exception as e:
-                logger.error(f"Error parsing existing pixel data: {e}")
-                
-        return existing_pixels
+        if not result:
+            return []
+            
+        try:
+            data = result[0]
+            if isinstance(data, list):
+                return data
+            else:
+                return [data]
+        except Exception as e:
+            logger.error(f"Error parsing existing pixel data: {e}")
+            return []
 
-    def save_to_postgres(self, data: List[Dict[str, Any]]) -> None:
-        """Save merged pixel data to PostgreSQL"""
-        # Clear old data and save new merged data
-        clear_table_sql = "TRUNCATE TABLE frames"
-        insert_sql = "INSERT INTO frames (data) VALUES (%s)"
+    def save_to_postgres(self, canvas_id, data: List[Dict[str, Any]]) -> None:
+        """Save merged pixel data to PostgreSQL using upsert"""
+        upsert_sql = """
+        INSERT INTO frames (canvas_id, data) 
+        VALUES (%s, %s)
+        ON CONFLICT (canvas_id) 
+        DO UPDATE SET data = %s, created_at = CURRENT_TIMESTAMP
+        """
         
         with self.conn.cursor() as cur:
-            # Clear existing data
-            cur.execute(clear_table_sql)
+            # JSON serialize the data
+            json_data = json.dumps(data)
             
-            # Insert new merged data as a single JSON array
-            cur.execute(insert_sql, (json.dumps(data),))
+            # Execute upsert
+            cur.execute(upsert_sql, (canvas_id, json_data, json_data))
             self.conn.commit()
             
-        logger.info(f"Saved {len(data)} pixels to PostgreSQL")
+        logger.info(f"Saved {len(data)} pixels to PostgreSQL for canvas {canvas_id}")
 
     def process_kafka_message(self, msg_value: bytes) -> None:
         """Process a single Kafka message"""
         try:
+            logger.info(f"Received message from kafka")
+            
             # Parse incoming data
-            new_pixels = json.loads(msg_value.decode('utf-8'))
-            if not isinstance(new_pixels, list):
-                new_pixels = [new_pixels]
-                
+            message_json = json.loads(msg_value.decode('utf-8'))
+            
+            # Extract canvas ID
+            canvas_id = message_json.get('canvasId', 'default')
+            
+            # Extract pixels from the nested structure
+            if 'updatedCells' in message_json and 'value' in message_json['updatedCells']:
+                # Get pixels from the nested structure
+                new_pixels = message_json['updatedCells']['value']
+            else:
+                # Handle the case if the message format is already a direct array
+                new_pixels = message_json if isinstance(message_json, list) else [message_json]
+            
             # Validate pixel data
+            valid_pixels = []
             for pixel in new_pixels:
-                if not all(k in pixel for k in ['x', 'y', 'color']):
-                    raise ValueError(f"Invalid pixel format: {pixel}")
-                    
+                if isinstance(pixel, dict) and all(k in pixel for k in ['x', 'y', 'color']):
+                    valid_pixels.append(pixel)
+                else:
+                    logger.warning(f"Invalid pixel format: {pixel}")
+            
+            if not valid_pixels:
+                logger.warning("No valid pixels found in message")
+                return
+                
             # Get existing data
-            existing_pixels = self.get_existing_pixels()
+            existing_pixels = self.get_existing_pixels(canvas_id)
             
             # Merge data
-            merged_pixels = merge_pixels(existing_pixels, new_pixels)
+            merged_pixels = merge_pixels(existing_pixels, valid_pixels)
             
             # Save merged data
-            self.save_to_postgres(merged_pixels)
+            self.save_to_postgres(canvas_id, merged_pixels)
             
-            logger.info(f"Processed {len(new_pixels)} new pixels, total {len(merged_pixels)} pixels after merge")
+            logger.info(f"Processed {len(valid_pixels)} new pixels for canvas {canvas_id}, total {len(merged_pixels)} pixels after merge")
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON: {e}")
-        except ValueError as e:
-            logger.error(f"Invalid data format: {e}")
         except Exception as e:
             logger.error(f"Error processing message: {e}")
 
@@ -126,10 +145,12 @@ class KafkaToPostgresPipeline:
                 if msg is None:
                     continue
                 if msg.error():
-                    if msg.error().code() == KafkaException._PARTITION_EOF:
+                    error_code = msg.error().code()
+                    # Check if it's end of partition without using the constant
+                    if error_code == -191:  # This is the numeric value for PARTITION_EOF in many Kafka clients
                         continue
                     else:
-                        logger.error(f"Kafka error: {msg.error()}")
+                        logger.error(f"Kafka error: {msg.error()} (code: {error_code})")
                         break
                 
                 self.process_kafka_message(msg.value())
@@ -144,16 +165,16 @@ class KafkaToPostgresPipeline:
 
 if __name__ == "__main__":
     kafka_config = {
-        'bootstrap.servers': 'kafka:9092',
+        'bootstrap.servers': 'kafka:29092',
         'group.id': 'image-processing-group',
         'auto.offset.reset': 'earliest'
     }
     
     postgres_config = {
         'host': 'db',
-        'database': 'canvas_db',
+        'database': 'postgresql',
         'user': 'postgres',
-        'password': 'postgres'
+        'password': '4000'
     }
     
     pipeline = KafkaToPostgresPipeline(kafka_config, postgres_config)
@@ -161,6 +182,6 @@ if __name__ == "__main__":
         pipeline.connect_kafka()
         pipeline.connect_postgres()
         pipeline.create_table_if_not_exists()
-        pipeline.consume_from_kafka('frames_topic')
+        pipeline.consume_from_kafka('db-draw')
     except Exception as e:
         logger.error(f"Pipeline failed: {e}")
