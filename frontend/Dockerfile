@@ -8,6 +8,8 @@ RUN npm install --legacy-peer-deps
 RUN npm install lodash @types/lodash
 
 COPY . .
+RUN npm install axios
+RUN npm audit fix
 RUN npm run build
 
 FROM nginx:alpine

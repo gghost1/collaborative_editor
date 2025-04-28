@@ -4,6 +4,7 @@ import { addPixels } from '../store/pixelsSlice';
 import type { RootState } from '../store/store';
 import type { Pixel } from '../entities/Pixel';
 import { throttle } from 'lodash';
+import { useParams } from 'react-router-dom';
 
 const Canvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -11,9 +12,23 @@ const Canvas: React.FC = () => {
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
   const pendingChunks = useRef<Pixel[][]>([]);
   const [currentColor] = useState('#000000');
+  const { roomId: canvasId } = useParams<{ roomId: string }>();
 
   const dispatch = useDispatch();
   const { rendered } = useSelector((s: RootState) => s.pixels);
+
+  useEffect(() => {
+    fetch(`http://localhost:8080/${canvasId}`)
+      .then(res => {
+        console.log(res)
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();                       // Fetch API → JSON :contentReference[oaicite:2]{index=2}
+      })                           // MDN: fetch → Promise → JSON :contentReference[oaicite:1]{index=1}
+      .then((data: { pixels: Pixel[] }) => {
+        dispatch(addPixels(data.pixels));                   // SO: как диспатчить экшен внутри useEffect :contentReference[oaicite:2]{index=2}
+      })
+      .catch(err => console.error("Fetch error:", err));
+  }, [canvasId, dispatch]);
 
   const sendChunk = useRef(
       throttle((chunk: Pixel[]) => {
