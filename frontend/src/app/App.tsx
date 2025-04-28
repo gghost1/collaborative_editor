@@ -21,8 +21,8 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '100px' }}>
-      <h1>Collaborative Canvas</h1>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+      <h1>Collaborative Editor</h1>
       <button onClick={createRoom} style={{ padding: '10px 20px', fontSize: '16px', margin: '10px' }}>
         Create Room
       </button>

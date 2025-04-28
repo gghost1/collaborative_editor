@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public record UpdateMessage(
         String canvasId,
-        UpdatedCells updatedCells
+        UpdatedCells updatedCells,
+        String senderId
 ) {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -16,5 +17,4 @@ public record UpdateMessage(
     public static UpdateMessage fromJson(String json) throws JsonProcessingException {
         return objectMapper.readValue(json, UpdateMessage.class);
     }
-
 }

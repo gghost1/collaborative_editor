@@ -88,7 +88,7 @@ services:
       - SPRING_KAFKA_GROUP_ID=backend-group
       - SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL=PLAINTEXT
     depends_on:
-      # - redis
+      - image_processing
       - kafka
       - db
     networks:
@@ -107,7 +107,7 @@ services:
   image_processing:
     build: ./image_processing_service
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - POSTGRES_HOST=db
       - POSTGRES_DB=postgresql
       - POSTGRES_USER=postgres
