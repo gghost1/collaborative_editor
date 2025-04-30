@@ -25,6 +25,7 @@ public class CanvasRestController {
     @Autowired
     private DataSource dataSource;
 
+    //get canvas data from database
     @GetMapping("/{canvasId}")
     public ResponseEntity<String> getCanvas(@PathVariable String canvasId) {
         log.info("Getting canvas with id: {}", canvasId);

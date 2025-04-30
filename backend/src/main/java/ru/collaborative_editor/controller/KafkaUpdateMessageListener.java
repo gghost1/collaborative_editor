@@ -18,6 +18,7 @@ import java.util.List;
 public class KafkaUpdateMessageListener {
     private final SimpMessagingTemplate messagingTemplate;
 
+    //listen messages from kafka and send them to clients
     @KafkaListener(topics = "${spring.kafka.topic-socket}", groupId = "${spring.kafka.group-id}")
     public void listen(@Payload String message) throws JsonProcessingException {
         UpdateMessage updateMessage = UpdateMessage.fromJson(message);

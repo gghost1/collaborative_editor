@@ -26,6 +26,8 @@ public class CanvasController {
     private final SendUpdates sendUpdates;
     private final Map<String, Set<String>> pixelCache = new ConcurrentHashMap<>();
 
+    //get sockets messages from clients and add them into local cache
+    // in order to send using kafka producer
     @MessageMapping("/draw/{canvasId}")
     public void handleDraw(
             @Payload UpdatedCells updatedCells,

@@ -14,6 +14,10 @@ import org.springframework.kafka.core.*;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Kafka configuration for socket communication
+ * Default configuration in order to send and receive String messages from kafka
+ */
 @Configuration
 @EnableKafka
 public class KafkaSocketConfig {
