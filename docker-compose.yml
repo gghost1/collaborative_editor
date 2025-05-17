@@ -44,7 +44,7 @@ services:
     image: docker.redpanda.com/redpandadata/console:latest
     container_name: redpanda-console
     ports:
-      - "8083:8080"
+      - "8083:8083"
     depends_on:
       - kafka
     environment:
