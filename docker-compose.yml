@@ -87,6 +87,7 @@ services:
     build: ./backend
     ports:
       - "8080:8080"
+      - "9091:9091"
     restart: always
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
