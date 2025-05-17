@@ -1,6 +1,8 @@
 package ru.collaborative_editor.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -20,11 +22,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Controller
-@RequiredArgsConstructor
 @Slf4j
 public class CanvasController {
+    private final Counter messageCounter;
     private final SendUpdates sendUpdates;
     private final Map<String, Set<String>> pixelCache = new ConcurrentHashMap<>();
+
+    public CanvasController(SendUpdates sendUpdates, MeterRegistry registry) {
+        this.sendUpdates = sendUpdates;
+        this.messageCounter = Counter.builder("app.user.updates")
+                .description("Количество обновлений от пользователей")
+                .tags("application", "whiteboard")
+                .register(registry);
+    }
 
     //get sockets messages from clients and add them into local cache
     // in order to send using kafka producer
@@ -34,6 +44,7 @@ public class CanvasController {
             @DestinationVariable String canvasId,
             @Header("simpSessionId") String sessionId
     ) throws JsonProcessingException {
+        messageCounter.increment();
         List<Cell> filtered = updatedCells.value().stream()
                 .filter(cell -> {
                     String key = cell.x() + ":" + cell.y() + ":" + cell.color();

@@ -1,5 +1,7 @@
 package ru.collaborative_editor.controller;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,13 +23,21 @@ import lombok.extern.slf4j.Slf4j;
 @CrossOrigin(origins = "*")
 @Slf4j
 public class CanvasRestController {
-
-    @Autowired
+    private final Counter messageCounter;
     private DataSource dataSource;
+
+    public CanvasRestController(DataSource dataSource, MeterRegistry registry) {
+        this.dataSource = dataSource;
+        this.messageCounter = Counter.builder("app.user.messages")
+                .description("Количество сообщений от пользователей")
+                .tags("application", "whiteboard")
+                .register(registry);
+    }
 
     //get canvas data from database
     @GetMapping("/{canvasId}")
     public ResponseEntity<String> getCanvas(@PathVariable String canvasId) {
+        messageCounter.increment();
         log.info("Getting canvas with id: {}", canvasId);
         
         try (Connection conn = dataSource.getConnection();
