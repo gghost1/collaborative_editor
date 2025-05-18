@@ -19,7 +19,7 @@ import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping("/")
+@RequestMapping("/api")
 @CrossOrigin(origins = "*")
 @Slf4j
 public class CanvasRestController {
