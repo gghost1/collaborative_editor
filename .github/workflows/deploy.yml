@@ -22,6 +22,6 @@ jobs:
             fi
             cd collaborative_editor
             git pull origin main
-            docker-compose down -v
+            docker-compose down
             docker volume rm collaborative_editor_kafka_data || true
             docker-compose up --build -d
