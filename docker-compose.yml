@@ -148,6 +148,10 @@ services:
       - "3000:3000"
     networks:
       - app-network
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
 
 networks:
   app-network:
@@ -156,3 +160,4 @@ networks:
 volumes:
   app_data:
   kafka_data:
+  grafana-data:
