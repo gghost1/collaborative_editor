@@ -18,7 +18,7 @@ const Canvas: React.FC = () => {
   const { rendered } = useSelector((s: RootState) => s.pixels);
 
   useEffect(() => {
-    fetch(`http://localhost:8080/${canvasId}`)
+    fetch(`/${canvasId}`)
       .then(res => {
         console.log(res)
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
